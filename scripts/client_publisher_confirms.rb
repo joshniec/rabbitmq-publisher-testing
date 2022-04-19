@@ -2,6 +2,8 @@
 require 'benchmark'
 require 'bunny'
 
+MESSAGES_TO_PUBLISH = 500_000
+
 conn = Bunny.new(hostname: 'localhost')
 conn.start
 
@@ -14,17 +16,19 @@ q_confirms = chan.queue('benchmark_confirms', exclusive: true).bind(ex_confirms)
 
 Benchmark.bm do |benchmark|
   benchmark.report('publish_noconfirm') do
-    100_000.times.each do |msg|
+    MESSAGES_TO_PUBLISH.times.each do |msg|
       ex_noconfirm.publish("noconfirm: #{msg}", routing_key: q_noconfirm.name)
     end
   end
 
   chan.confirm_select
   benchmark.report('publisher_confirms') do
-    100_000.times.each do |msg|
+    MESSAGES_TO_PUBLISH.times.each do |msg|
       ex_confirms.publish("confirm: #{msg}", routing_key: q_confirms.name)
     end
   end
 end
 
+q_noconfirm.purge
+q_confirms.purge
 conn.close
